@@ -162,3 +162,60 @@ my-project/
 | 호환성            | 구버전 ESLint와 호환           | ESLint v9+ 공식 권장           |
 | 특징              | 단순하고 직관적                | 유연하고 모듈화 가능           |
 | 사용 여부         | 여전히 사용 가능               | 최신 Next.js에서 기본값        |
+
+---
+
+## pnpm
+- pnpm은 **효율적인(Performant) NPM**의 약자로, 고성능 Node 패키지 매니저  
+- npm, yarn과 같은 목적의 패키지 매니저이지만,  
+  디스크 공간 낭비, 복잡한 의존성 관리, 느린 설치 속도 문제를 개선하기 위해 개발됨  
+
+대표적인 특징  
+1. **하드 링크 기반 저장소**  
+   - 패키지를 한 번만 설치해 전역 저장소에 두고,  
+     각 프로젝트의 `node_modules`에는 하드 링크(또는 심볼릭 링크) 생성  
+   - 디스크 공간 절약  
+
+2. **빠른 설치 속도**  
+   - 이미 설치된 패키지는 다시 다운로드하지 않고 재사용  
+   - 초기 설치뿐만 아니라 업데이트 시에도 속도가 빠름  
+
+3. **효율적인 종속성 관리**  
+   - 의존성 충돌 및 중복 문제를 줄여 관리 효율성을 높임  
+
+4. **기존 패키지 매니저의 비효율 개선**  
+   - npm, yarn의 단점을 보완  
+
+---
+
+## pnpm vs npm
+주요 명령어 비교표. 기본적으로 명령어 구조는 비슷하지만 세부 키워드에 차이가 있음.  
+
+| 작업            | NPM                              | PNPM                         | Yarn                          |
+|-----------------|----------------------------------|------------------------------|-------------------------------|
+| 패키지 설치(전체) | `npm install`                   | `pnpm install`               | `yarn`                        |
+| 패키지 추가      | `npm install [pkg]`             | `pnpm add [pkg]`             | `yarn add [pkg]`              |
+| 패키지 삭제      | `npm uninstall [pkg]`           | `pnpm remove [pkg]`          | `yarn remove [pkg]`           |
+| 개발 의존성 추가 | `npm install --save-dev [pkg]`  | `pnpm add -D [pkg]`          | `yarn add --dev [pkg]`        |
+| 전역 설치        | `npm install -g [pkg]`          | `pnpm add -g [pkg]`          | `yarn global add [pkg]`       |
+| 스크립트 실행    | `npm run [script]`              | `pnpm [script]`              | `yarn [script]`               |
+| 캐시 정리        | `npm cache clean`               | `pnpm store prune`           | `yarn cache clean`            |
+| 의존성 업데이트  | `npm update`                    | `pnpm update`                | `yarn upgrade`                |
+| 잠금 파일 업데이트 | `npm install --force`           | `pnpm install --force`       | `yarn install --force`        |
+
+---
+
+## Hard link vs Symbolic link
+pnpm의 특징 중 하나는 하드 링크를 활용해 디스크 공간을 효율적으로 사용한다는 점임.  
+탐색기에서 npm과 pnpm 프로젝트의 `node_modules` 용량 차이를 확인해보면 이해 가능.  
+
+### 하드 링크 (Hard link)
+파일은 크게 두 부분으로 나뉨  
+1. **Directory Entry**: 파일 이름과 해당 inode 번호를 매핑하는 정보  
+2. **inode**: 파일/디렉토리에 대한 메타데이터 저장 (권한, 소유자, 크기, 데이터 블록 위치 등)  
+
+즉, 하드 링크는 동일한 inode를 가리키는 또 다른 이름을 만들어내는 방식.  
+하나의 실제 데이터 블록을 여러 파일 이름이 공유하게 됨 → 디스크 공간 절약 효과.  
+
+---
+
