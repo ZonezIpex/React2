@@ -1,5 +1,306 @@
 <h1> 202130413 신민수
 
+<h1> 2025년 09월 10일 3주차 </h1>  
+<h1> 수업내용: Next.js 관련 기본 용어 정리 </h1>  
+
+## 용어 정의
+- 원문에서 `route`라는 단어가 자주 등장 → 사전적 의미는 "경로"  
+- `route(라우트)` : "경로" 자체를 의미  
+- `routing(라우팅)` : "경로를 찾아가는 과정"을 의미  
+- `path`도 "경로"라는 뜻이지만, 구분을 위해 주로 `routing(라우팅)`으로 번역  
+
+### directory vs folder
+- 둘 사이에 특별한 구분은 없음  
+- 최상위 폴더는 directory, 하위 폴더는 folder라고 부르기도 하지만 꼭 그런 건 아님  
+- 운영체제에 따라 용어가 다르게 쓰일 뿐, 같은 의미로 이해하면 됨  
+
+### segment
+- routing과 관련된 directory의 별칭 정도로 이해하면 됨  
+
+---
+
+## Folder & File Conventions — Top-level folders
+- 최상위 폴더는 앱의 코드와 정적 자산을 구성하는 데 사용됨
+- `src/`를 쓰면 애플리케이션 소스를 한 곳으로 모아 구조가 깔끔해짐
+
+| 폴더  | 의미(한글) | 의미(영문) |
+|------|------------|------------|
+| app  | 앱 라우터  | App Router |
+| pages| 페이지 라우터 | Pages Router |
+| public | 제공될 정적 리소스 | Static assets to be served |
+| src  | 선택적 애플리케이션 소스 폴더 | Optional application source folder |
+
+---
+
+## Top-level files
+- 프로젝트 생성 시 모두가 자동 생성되는 것은 아님(선택 옵션에 따라 다름)
+
+| 파일 | 용도(한글) | 용도(영문) |
+|-----|-----------|-----------|
+| `next.config.js` | Next.js 구성 파일 | Configuration for Next.js |
+| `package.json` | 프로젝트 종속성/스크립트 | Dependencies and scripts |
+| `instrumentation.ts` | OpenTelemetry/계측 | OpenTelemetry & instrumentation |
+| `middleware.ts` | 요청 미들웨어 | Request middleware |
+| `.env` | 환경 변수 | Environment variables |
+| `.env.local` | 로컬 환경 변수 | Local env |
+| `.env.production` | 프로덕션 환경 변수 | Production env |
+| `.env.development` | 개발 환경 변수 | Development env |
+| `.eslintrc.json` 또는 `eslint.config.mjs` | ESLint 설정 | ESLint configuration |
+| `.gitignore` | Git에서 무시할 항목 | Git ignore list |
+| `next-env.d.ts` | Next.js 타입 선언 | TypeScript declarations for Next.js |
+| `tsconfig.json` | TypeScript 설정 | TS configuration |
+| `jsconfig.json` | JavaScript 설정 | JS configuration |
+
+---
+
+## Routing Files (App Router)
+| 파일명 | 확장자 | 의미(한글) | 의미(영문) |
+|-------|-------|-------------|------------|
+| `layout` | `js` `jsx` `tsx` | 레이아웃 | Layout |
+| `page` | `js` `jsx` `tsx` | 페이지 | Page |
+| `loading` | `js` `jsx` `tsx` | 로딩 UI | Loading UI |
+| `not-found` | `js` `jsx` `tsx` | 404 UI | Not Found UI |
+| `error` | `js` `jsx` `tsx` | 에러 UI(세그먼트 범위) | Error UI |
+| `global-error` | `js` `jsx` `tsx` | 전역 에러 UI | Global error UI |
+| `route` | `js` `ts` | API 엔드포인트 | API endpoint |
+| `template` | `js` `jsx` `tsx` | 다시 렌더되는 레이아웃 | Re-rendered layout |
+| `default` | `js` `jsx` `tsx` | 병렬 라우팅 대체 페이지 | Parallel route fallback |
+
+---
+
+## Nested routes(중첩 라우팅)
+```txt
+folder           → 라우팅 세그먼트
+folder/folder    → 중첩된 라우팅 세그먼트
+```
+
+---
+
+## Dynamic routes(동적 라우팅)
+```txt
+[folder]     → 동적 세그먼트  (예: /posts/[id])
+[...folder]  → 포괄(catch-all) 세그먼트  (예: /docs/a/b/c)
+[[...folder]]→ 선택적 포괄 세그먼트(파라미터 없어도 매칭)
+```
+
+---
+
+## Route Groups & Private Folders
+- **Route Group**: `(group)` — URL에 포함되지 않고 경로를 그룹화  
+  ```txt
+  app/(marketing)/page.tsx   → URL: / (group 이름 노출 X)
+  ```
+- **Private Folder**: `_{name}` — 라우팅에서 제외(파일/컴포넌트 보관용)  
+  ```txt
+  app/_components/Button.tsx → import 용도로만 사용, URL 매칭 X
+  ```
+
+---
+
+## Parallel & Intercepted Routes
+- **Parallel routes(병렬 라우팅)**: `@slot` — 명명된 슬롯
+  ```txt
+  app/dashboard/@analytics/page.tsx
+  app/dashboard/@feed/page.tsx
+  ```
+- **Intercepted routes(차단/가로채기 라우팅)** — 특정 레벨에서 다른 세그먼트 내용을 끌어옴
+  ```txt
+  (.)segment    → 동일 레벨에서 가로채기
+  (..)segment   → 한 레벨 위에서 가로채기
+  (...)segment  → 루트에서 가로채기
+  ```
+---
+
+## Metadata file conventions
+### App icons
+| 파일명        | 확장자                | 설명(한글)          | 설명(영문)            |
+|--------------|----------------------|---------------------|-----------------------|
+| favicon      | .ico                 | 파비콘 파일         | Favicon file          |
+| icon         | .ico .jpg .jpeg .png .svg | 앱 아이콘 파일     | App icon file         |
+| icon         | .js .ts .tsx         | 생성된 앱 아이콘    | Generated app icon    |
+| apple-icon   | .jpg .jpeg .png      | Apple 앱 아이콘 파일 | Apple App icon file   |
+| apple-icon   | .js .ts .tsx         | 생성된 Apple 아이콘 | Generated Apple icon  |
+
+### Open Graph / Twitter images
+| 파일명            | 확장자                | 설명(한글)         | 설명(영문)              |
+|------------------|----------------------|--------------------|-------------------------|
+| opengraph-image  | .jpg .jpeg .png .gif | Open Graph 이미지  | Open Graph image file   |
+| opengraph-image  | .js .ts .tsx         | 생성된 OG 이미지   | Generated OG image      |
+| twitter-image    | .jpg .jpeg .png .gif | 트위터 이미지 파일 | Twitter image file      |
+| twitter-image    | .js .ts .tsx         | 생성된 트위터 이미지 | Generated Twitter image |
+
+### SEO
+| 파일명   | 확장자  | 설명(한글)   | 설명(영문)        |
+|----------|---------|-------------|-------------------|
+| sitemap  | .xml    | 사이트맵     | Sitemap file      |
+| sitemap  | .js .ts | 생성된 사이트맵 | Generated sitemap |
+| robots   | .txt    | 로봇 파일   | Robots file       |
+| robots   | .js .ts | 생성된 로봇 파일 | Generated robots |
+
+---
+
+## Open Graph
+- 링크를 보낼 때 미리보기를 만드는 프로토콜  
+- 대표적인 규격: **Open Graph Protocol (OGP)**  
+- Facebook 주도, 대부분 SNS 플랫폼에서 활용  
+- 모든 플랫폼이 동일한 방식으로 처리하지는 않음  
+- 웹페이지 `<head>`의 메타 태그에 선언  
+
+예시:
+```html
+<meta property="og:type" content="website" />
+<meta property="og:url" content="https://example.com/page.html" />
+<meta property="og:title" content="페이지 제목" />
+<meta property="og:description" content="페이지 설명 요약" />
+<meta property="og:image" content="https://example.com/image.jpg" />
+<meta property="og:site_name" content="사이트 이름" />
+<meta property="og:locale" content="ko_KR" />
+```
+
+---
+
+## Component hierarchy
+특수 파일에 정의된 컴포넌트는 계층 구조에 따라 렌더링됨  
+
+- layout.js  
+- template.js  
+- error.js (React 오류 경계)  
+- loading.js (서스펜스 로딩 경계)  
+- not-found.js (404 UI)  
+- page.js (또는 중첩 layout.js)  
+
+렌더링 구조 예시:
+```jsx
+<Layout>
+  <Template>
+    <ErrorBoundary fallback={<Error />}>
+      <Suspense fallback={<Loading />}>
+        <ErrorBoundary fallback={<NotFound />}>
+          <Page />
+        </ErrorBoundary>
+      </Suspense>
+    </ErrorBoundary>
+  </Template>
+</Layout>
+```
+
+---
+
+## layout vs template
+| 파일         | 특징                       | 상태/DOM 유지   | 사용 사례                        |
+|-------------|---------------------------|----------------|----------------------------------|
+| layout.tsx  | 경로별 공유 레이아웃       | 유지됨 (정적)  | 네비게이션, 사이드바, 공통 레이아웃 |
+| template.tsx| 매번 새 인스턴스 생성      | 초기화됨 (동적) | 페이지별 초기화가 필요한 경우       |
+
+---
+
+## Organizing your project (프로젝트 구성하기)
+- **Colocation**: 파일/폴더를 기능 단위로 묶어 구조를 명확히 함  
+- `app` 디렉토리에서 중첩 폴더는 라우팅 세그먼트를 정의  
+- 각 폴더는 URL 경로 세그먼트에 매핑됨  
+
+주의사항  
+- 라우팅 세그먼트 폴더라도 `page.js` 또는 `route.js` 파일이 없으면 공개 접근 불가  
+- 따라서 페이지나 API 엔드포인트 파일이 반드시 필요함  
+
+---
+
+## Organizing your project (심화)
+- `app` 디렉토리의 파일은 **기본적으로 안전하게 코로케이션** 가능  
+- 코로케이션 시 내부 파일을 일관되게 구성 → 관리 용이
+- 파일 정리 및 그룹화를 통해 코드 편집기 사용성 향상
+- 파일 이름 충돌 방지에 유리
+
+알아두면 좋은 정보
+- 프레임워크 규칙은 아니지만, 동일한 패턴으로 비공개 폴더 외부 파일을 `"비공개"` 표시 가능  
+- 폴더명 앞에 `%5F`(밑줄 URL 인코딩) 붙이면 밑줄 시작 세그먼트 생성 가능  
+- Next.js의 특수 파일 규칙을 알고 있으면 이름 충돌을 방지할 수 있음  
+
+---
+
+## 라우팅 그룹 (Routing Groups)
+라우팅 그룹이 유용한 경우:
+- 사이트 섹션별/팀별로 라우트 구성 (예: 마케팅, 관리 페이지 등)  
+- 동일한 세그먼트 내 중첩 레이아웃 활성화 가능  
+
+예시:
+- 공통 세그먼트 내 여러 개의 레이아웃 포함 → 중첩 레이아웃 생성  
+- 하위 그룹에도 레이아웃 추가 가능  
+
+---
+
+## 예제 (Examples)
+- 일반적인 프로젝트 전략에 대한 개요
+- 팀/프로젝트에 맞는 전략을 선택해 전체에 일관되게 적용하는 것이 핵심
+
+알아두면 좋은 점
+- `components/`, `lib/` 폴더는 자주 쓰이는 일반적인 플레이스홀더  
+- 프레임워크에서 특별한 의미가 있는 이름은 아님  
+- 프로젝트 상황에 따라 `UI/`, `utils/`, `hooks/`, `styles/` 등 다른 이름을 자유롭게 사용 가능  
+
+---
+
+## 프로젝트 생성
+Next.js 프로젝트 생성 절차
+```bash
+npx create-next-app@latest
+```
+
+선택 항목 (예시는 모두 `yes`)
+1. 프로젝트 이름  
+2~4. TypeScript, ESLint, Tailwind 사용 여부  
+5. `src/` 디렉토리 사용 여부  
+6. App Router 사용 여부  
+7. import alias 사용 여부  
+8. alias 문자 지정 (기본 `@/*`)  
+
+생성 후 실행:
+```bash
+npm run dev
+```
+
+---
+
+## 서버 실행 전후
+- 실행 시 `.next` 디렉토리 자동 생성  
+- `.next`는 **빌드 아웃풋 및 캐시/중간 산출물 저장용**  
+- `next dev`, `next build`, `next start` 실행 시 내부적으로 필요한 작업을 보관하는 폴더
+
+---
+
+## src/ 디렉토리 선택
+- 모든 프로젝트 파일을 `src/` 디렉토리 안에 넣어 관리 가능  
+
+### src 디렉토리 사용 (추천)
+- 구조: 모든 코드가 `src/` 폴더 안에 들어감  
+- 예: `src/app`, `src/components`, `src/lib`  
+- 목적: 코드와 설정 파일 분리  
+- 추천: 규모가 큰 프로젝트에 적합  
+
+### src 디렉토리 미사용
+- 코드가 루트에 바로 위치  
+- 예: `app`, `components`, `lib`  
+- 전체가 섞여 있어서 단순/작은 프로젝트에 적합  
+
+---
+
+## .eslintrc.json vs eslint.config.mjs
+### .eslintrc.json
+- JSON 형식 → 단순하지만 조건문/변수 사용 불가  
+- 정적인 설정 파일  
+- 구버전 ESLint와 호환  
+- 간단하고 직관적  
+
+### eslint.config.mjs
+- ESM(Module JS) 형식  
+- 함수/변수/동적 로직 활용 가능  
+- ESLint v9 이상에서 권장  
+- 더 유연하고 모듈화 가능  
+- Next.js 최신 기본값
+
+---
+
+
 <h1> 2025년 09월03일 2주차 </h1>
 <h1> 수업내용: Next.js 설치, TypeScript/ESLint 설정, 경로 별칭 구성 </h1>
 
