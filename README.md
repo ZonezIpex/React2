@@ -1,5 +1,154 @@
 <h1> 202130413 신민수
 
+<h1> 2025년 09월 17일 4주차 </h1>
+<h1> 수업내용: Git 브랜치 전환(checkout vs switch)와 Next.js 페이지 생성 </h1>
+
+## Git: checkout vs switch 차이
+- **checkout**: 브랜치 전환 + 파일 복구/수정까지 가능 → 실수 위험 높음(파일 덮어쓰기, Detached HEAD 등)
+- **switch**: 브랜치 전환 전용 → 비교적 안전함
+- 도입 시기: checkout(초기부터), switch(Git 2.23, 2019)
+
+### 왜 checkout은 남아있나?
+- 커밋 해시로 특정 커밋으로 이동, 파일 복구 등 **브랜치 전환 외의 작업**을 지원하기 때문
+
+### 브랜치 생성/이동 명령 요약
+```bash
+# 새 브랜치 생성 + 이동(권장)
+git switch -c <branch>
+
+# checkout 방식(구버전 호환)
+git checkout -b <branch>
+
+# 브랜치 이동
+git switch <branch>
+git checkout <branch>
+
+# 브랜치 생성만(이동 없음)
+git branch <branch>
+```
+
+- 특별한 이유가 없다면 **switch 사용 권장**
+- `git branch`는 생성/삭제/조회 전용(이동 불가)
+
+---
+
+## Next.js: Page 만들기
+- Next.js는 **파일 시스템 기반 라우팅**을 사용
+- 특정 경로의 화면은 `app/` 폴더 내부의 `page.tsx`로 정의
+- 컴포넌트는 **default export** 해야 함
+
+### 기본 예시
+```tsx
+// app/page.tsx  →  경로: /
+export default function Page() {
+  return <h1>Hello Next.js!</h1>;
+}
+```
+
+- 다른 경로 예: `app/about/page.tsx` → `/about`
+- 2장에서 다뤘던 내용이지만, 직접 다시 작성해 보며 흐름 확인
+
+---
+
+## Next.js: Layout 만들기
+- 여러 페이지에서 공유되는 UI를 정의함
+- 네비게이션 중에도 상태/상호작용 유지, 불필요한 재렌더링 없음
+- `layout.tsx` 파일에서 `default export`로 컴포넌트를 내보내고, `children`을 반드시 허용해야 함
+
+### 기본 예시
+```tsx
+// app/layout.tsx
+import type { Metadata } from "next";
+import "./globals.css";
+
+export const metadata: Metadata = { title: "My App" };
+
+export default function RootLayout({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
+  return (
+    <html lang="ko">
+      <body>
+        <header>공통 헤더</header>
+        <main>{children}</main>
+        <footer>공통 푸터</footer>
+      </body>
+    </html>
+  );
+}
+```
+
+### 중첩 레이아웃 예시
+```tsx
+// app/dashboard/layout.tsx  → /dashboard 이하에서만 적용
+export default function DashboardLayout({ children }: { children: React.ReactNode }) {
+  return (
+    <section>
+      <aside>대시보드 메뉴</aside>
+      <div>{children}</div>
+    </section>
+  );
+}
+```
+- `children`은 해당 레이아웃 내부에 렌더링될 `page` 또는 다른 `layout`을 의미
+
+---
+
+## Next.js: 중첩 라우트 만들기 (Nested routes)
+- 라우트는 다중 URL 세그먼트로 구성됨  
+  예: `/blog/[slug]` → `/`(root) / `blog` / `[slug]`(leaf)
+- **폴더 = URL 세그먼트**, **파일(`page.tsx`, `route.ts`) = UI/엔드포인트**
+
+### 폴더 구조 예
+```txt
+app/
+ ├─ page.tsx                → /
+ └─ blog/
+    ├─ page.tsx             → /blog
+    └─ [slug]/
+       └─ page.tsx          → /blog/:slug
+```
+
+### /blog 인덱스 페이지 예
+```tsx
+// app/blog/page.tsx
+type Post = { id: string; title: string };
+
+async function getPosts(): Promise<Post[]> {
+  // 실제로는 DB/파일/외부 API 등에서 가져옴
+  return [{ id: "hello", title: "첫 글" }, { id: "next", title: "Next.js 소개" }];
+}
+
+export default async function BlogPage() {
+  const posts = await getPosts();
+  return (
+    <ul>
+      {posts.map((p) => (
+        <li key={p.id}>
+          <a href={`/blog/${p.id}`}>{p.title}</a>
+        </li>
+      ))}
+    </ul>
+  );
+}
+```
+
+### 동적 세그먼트 페이지 예
+```tsx
+// app/blog/[slug]/page.tsx
+export default function PostPage({ params }: { params: { slug: string } }) {
+  return <h1>포스트: {params.slug}</h1>;
+}
+```
+- 폴더를 중첩할수록 세그먼트가 깊어짐
+- 공개 라우트로 접근하려면 해당 세그먼트에 `page.tsx`(또는 API면 `route.ts`)가 있어야 함
+
+---
+
+
+
 <h1> 2025년 09월 10일 3주차 </h1>  
 <h1> 수업내용: Next.js 관련 기본 용어 정리 </h1>  
 
