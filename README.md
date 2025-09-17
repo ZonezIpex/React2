@@ -147,6 +147,181 @@ export default function PostPage({ params }: { params: { slug: string } }) {
 
 ---
 
+## 문서 코드 그대로 복사 시 오류 해결
+- 원인: 예제에 등장하는 `@/lib/posts`, `@/ui/post` 파일을 만들지 않아 **모듈을 찾지 못함**.
+- 해결 방향(강의 흐름용 최소 구현):
+  1) `app/blog/posts.ts`에 **더미 데이터**를 만든다.  
+  2) `app/blog/page.tsx`에서는 목록만 렌더링한다.  
+  3) `app/blog/[slug]/page.tsx`에서는 `params.slug`로 해당 포스트를 찾아 렌더링한다.
+
+### 1) 더미 데이터
+```ts
+// app/blog/posts.ts
+export type Post = {
+  slug: string;
+  title: string;
+  content: string;
+};
+
+export const posts: Post[] = [
+  { slug: "nextjs",        title: "Next.js 소개",          content: "Next.js는 React 기반의 풀스택 프레임워크." },
+  { slug: "routing",       title: "App Router 알아보기",   content: "Next.js 13부터 App Router가 도입됨." },
+  { slug: "ssr-ssg",       title: "SSR vs SSG",            content: "서버 사이드 렌더링과 정적 사이트 생성 비교." },
+  { slug: "dynamic-routes",title: "동적 라우팅",           content: "폴더명을 [slug]로 두면 동적 세그먼트가 생성됨." }
+];
+```
+
+### 2) 목록 페이지(블로그 루트)
+```tsx
+// app/blog/page.tsx   → /blog
+import Link from "next/link";
+import { posts } from "./posts";
+
+export default function BlogPage() {
+  return (
+    <ul>
+      {posts.map((p) => (
+        <li key={p.slug}>
+          <Link href={`/blog/${p.slug}`}>{p.title}</Link>
+        </li>
+      ))}
+    </ul>
+  );
+}
+```
+
+### 3) 상세 페이지(동적 세그먼트)
+```tsx
+// app/blog/[slug]/page.tsx   → /blog/:slug
+import { notFound } from "next/navigation";
+import { posts } from "../posts";
+
+type Props = { params: { slug: string } };
+
+export function generateStaticParams() {
+  return posts.map((p) => ({ slug: p.slug }));
+}
+
+export default function PostPage({ params }: Props) {
+  const post = posts.find((p) => p.slug === params.slug);
+  if (!post) return notFound();
+  return (
+    <article>
+      <h1>{post.title}</h1>
+      <p>{post.content}</p>
+    </article>
+  );
+}
+```
+
+---
+
+## 중첩 라우트 만들기(복습)
+- 폴더를 중첩하여 **세그먼트**를 만든다. 파일(`page.tsx`,`route.ts`)이 실제 UI/엔드포인트를 담당.
+- 예시 구조:
+```txt
+app/
+ └─ blog/
+    ├─ page.tsx          → /blog
+    ├─ posts.ts          → 데이터(예시)
+    └─ [slug]/
+       └─ page.tsx       → /blog/:slug
+```
+- 폴더명을 대괄호로 감싼 `[slug]`는 **동적 경로 세그먼트**를 의미.
+
+---
+
+## `[slug]` 이해
+- `slug`는 특정 페이지를 **사람이 읽기 쉬운 식별자**로 구분하기 위한 URL 조각.
+- 데이터에서도 **동일 키**(여기선 `slug`)가 반드시 존재해야 라우트와 매칭 가능.
+  - 예: `/blog/nextjs` → 데이터 객체의 `{ slug: "nextjs", ... }`와 매칭.
+- 이름은 반드시 `slug`일 필요는 없지만, 폴더명과 데이터 키가 **일치**해야 한다.
+
+---
+
+## `[slug]`의 이해 (디렉토리/파일 연결)
+- 디렉토리 구조 예
+```txt
+app/
+ └─ blog/
+    ├─ page.tsx      → 블로그 메인(목록)
+    └─ [slug]/
+       └─ page.tsx   → 블로그 상세
+```
+
+- 기본 상세 페이지(동기 props 가정) 예
+```tsx
+// app/blog/[slug]/page.tsx
+import { posts } from "../posts";
+
+export default function Posts({ params }: { params: { slug: string } }) {
+  const post = posts.find((p) => p.slug === params.slug);
+  if (!post) return <h1>게시글을 찾을 수 없습니다.</h1>;
+  return (
+    <article>
+      <h1>{post.title}</h1>
+      <p>{post.content}</p>
+    </article>
+  );
+}
+```
+
+---
+
+## Next 14.2+/15.x에서 발생하는 `params` 관련 오류
+- 증상: 동작은 되지만 아래와 같은 에러 로그가 뜸  
+  `Route "/blog/[slug]" used 'params.slug'. 'params' should be awaited before using its properties.`
+- 원인: App Router에서 `params`, `searchParams`가 **Promise 기반**으로 전달되는 환경/버전이 있음  
+  → 사용 전에 `await` 해야 함
+
+### 수정 코드 (비동기 props 대응)
+```tsx
+// app/blog/[slug]/page.tsx   (Next 14.2+/15.x 호환)
+import { notFound } from "next/navigation";
+import { posts } from "../posts";
+
+type Params = { slug: string };
+
+export default async function Posts({
+  params,
+}: {
+  params: Promise<Params>;
+}) {
+  // 1) 비동기 params 해제
+  const { slug } = await params;
+
+  // 2) 데이터 조회
+  const post = posts.find((p) => p.slug === slug);
+  if (!post) return notFound();
+
+  // 3) 렌더링
+  return (
+    <article>
+      <h1>{post.title}</h1>
+      <p>{post.content}</p>
+    </article>
+  );
+}
+
+// (선택) 정적 생성 시 슬러그 프리패치
+export function generateStaticParams() {
+  return posts.map((p) => ({ slug: p.slug }));
+}
+```
+
+> 참고  
+> - 파일을 비동기 컴포넌트로 바꾼 뒤에는 **개발 서버를 재시작**해야 경고/오류가 사라지는 경우가 있음.  
+> - 만약 현재 환경에서 오류가 없다면, `params`가 동기 객체로 전달되는 설정일 수 있음(이전 예시 코드 사용).
+
+---
+
+## 코드 해설 (수정본 3~5라인 맥락)
+- `async function`: 컴포넌트 내부에서 `await` 사용 가능
+- `params: Promise<Params>`: 타입으로 **비동기 props**임을 명시
+- `const { slug } = await params;`: 실제 사용 전에 `await`로 해제하여 속성 접근 오류를 방지
+
+---
+
 
 
 <h1> 2025년 09월 10일 3주차 </h1>  
