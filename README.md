@@ -1,5 +1,134 @@
 <h1> 202130413 신민수
 
+<h1> 2025년 09월 24일 5주차 </h1>
+<h1> 수업내용: Next.js searchParams, [slug] 비동기 params 정리, Link 컴포넌트/전역 메뉴 실습 </h1>
+
+## searchParams란?
+- URL의 **쿼리 문자열(Query String)** 을 읽는 방법.
+- 예) `/products?category=shoes&page=2`  
+  - `category=shoes`, `page=2`가 **search parameters**.
+
+### App Router에서 사용 (동기 형태)
+```tsx
+// app/products/page.tsx
+export default function ProductsPage({
+  searchParams,
+}: {
+  searchParams: { [key: string]: string | string[] | undefined };
+}) {
+  const category = searchParams.category ?? "all";
+  const page = Number(searchParams.page ?? 1);
+  return <p>카테고리: {category} / 페이지: {page}</p>;
+}
+```
+
+### App Router에서 사용 (비동기 형태를 명시)
+> 일부 버전/설정(14.2+/15.x)에서는 `searchParams`가 **Promise**로 전달될 수 있음.
+```tsx
+// app/products/page.tsx  (비동기 props 대응)
+export default async function ProductsPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ [k: string]: string | string[] | undefined }>;
+}) {
+  const sp = await searchParams;
+  const category = sp.category ?? "all";
+  const page = Number(sp.page ?? 1);
+  return <p>카테고리: {category} / 페이지: {page}</p>;
+}
+```
+
+---
+
+## `[slug]` 심화: 성능/타이핑 메모
+- 데이터가 커지면 `.find`(O(n)) 대신 **DB 쿼리/인덱스**로 대체.
+- `params`가 동기처럼 보일 때도 **비동기일 수 있음을 타입으로 명시**하면 가독성과 안전성↑
+- 실수로 `await`을 빼먹었을 때 **TypeScript가 잡아줌**.
+
+간단 예시(지난 실습 보강):
+```tsx
+// app/blog/[slug]/page.tsx
+import { notFound } from "next/navigation";
+import { posts } from "../posts";
+
+type Params = { slug: string };
+
+export default async function PostPage({
+  params,
+}: { params: Promise<Params> }) {
+  const { slug } = await params;           // 비동기 해제
+  const post = posts.find((p) => p.slug === slug);
+  if (!post) return notFound();
+  return (
+    <article>
+      <h1>{post.title}</h1>
+      <p>{post.content}</p>
+    </article>
+  );
+}
+```
+
+---
+
+## Link 컴포넌트 실습
+### 1) 블로그 목록에 링크 추가 (이미 적용되어 있으면 스킵)
+```tsx
+// app/blog/page.tsx
+import Link from "next/link";
+import { posts } from "./posts";
+
+export default function BlogPage() {
+  return (
+    <>
+      <h2>블로그 목록</h2>
+      <ul>
+        {posts.map((p) => (
+          <li key={p.slug}>
+            <Link href={`/blog/${p.slug}`}>{p.title}</Link>
+          </li>
+        ))}
+      </ul>
+    </>
+  );
+}
+```
+
+### 2) 모든 페이지에서 보이는 전역 메뉴 만들기
+```tsx
+// app/layout.tsx  (전역 네비게이션 추가)
+import type { Metadata } from "next";
+import Link from "next/link";
+import "./globals.css";
+
+export const metadata: Metadata = { title: "My App" };
+
+export default function RootLayout({ children }: { children: React.ReactNode }) {
+  return (
+    <html lang="ko">
+      <body>
+        <header style={{ padding: 12, borderBottom: "1px solid #ddd" }}>
+          <nav style={{ display: "flex", gap: 12 }}>
+            <Link href="/">Home</Link>
+            <Link href="/blog">Blog</Link>
+            <Link href="/products?category=shoes&page=1">Products</Link>
+          </nav>
+        </header>
+        <main style={{ padding: 16 }}>{children}</main>
+        <footer style={{ padding: 12, borderTop: "1px solid #ddd" }}>© 2025</footer>
+      </body>
+    </html>
+  );
+}
+```
+
+> 팁  
+> - **내부 이동**은 `Link` 사용(클라이언트 네비게이션, 프리페치).  
+> - 쿼리 문자열 조합 시 `Link`에 객체 형태도 가능:  
+>   `href={{ pathname: "/products", query: { category: "shoes", page: 2 } }}`
+
+---
+
+
 <h1> 2025년 09월 17일 4주차 </h1>
 <h1> 수업내용: Git 브랜치 전환(checkout vs switch)와 Next.js 페이지 생성 </h1>
 
