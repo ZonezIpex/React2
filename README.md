@@ -128,6 +128,80 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
 
 ---
 
+## 1) Route 방식 비교: React vs Next.js
+- **React(기본)**  
+  - 라우팅: 외부 라이브러리 설치 필요(예: `react-router-dom`)  
+  - 정의: 코드에서 `<Route>`로 직접 경로 매핑  
+  - 예시:
+  ```tsx
+  // React Router
+  import { Routes, Route } from "react-router-dom";
+  export default function App() {
+    return (
+      <Routes>
+        <Route path="/about" element={<About />} />
+      </Routes>
+    );
+  }
+  ```
+- **Next.js**  
+  - 라우팅: **파일/폴더 기반 자동 매핑**(내장)  
+  - 정의: 파일 경로로 자동 라우트 생성  
+  - 예시:
+  ```txt
+  pages/about.js     → /about
+  app/about/page.tsx → /about
+  ```
+
+## 2) Next.js 라우팅: Pages Router vs App Router
+- **Pages Router**
+  - 도입: 초기 버전(Next 1~12)
+  - 디렉토리: `pages/`
+  - 특징: 단순·익숙함(기존 React 방식과 유사)
+  - 대표: 동적 라우트, `getStaticProps`, `getServerSideProps`
+  - 상태: 유지보수 중(신규에 권장 X)
+- **App Router**
+  - 도입: Next 13+
+  - 디렉토리: `app/`
+  - 특징: **레이아웃 중첩**, 서버 컴포넌트, 로딩 UI, 병렬/인터셉트 라우트 등 강력
+  - 권장: Next 14+ 기본 권장
+- Pages Router 예시
+  ```txt
+  pages/
+  ├─ index.tsx       → /
+  ├─ about.tsx       → /about
+  └─ blog/[slug].tsx → /blog/:slug
+  ```
+- App Router 예시
+  ```txt
+  app/
+  ├─ layout.tsx
+  ├─ page.tsx          → /
+  └─ about/
+     └─ page.tsx       → /about
+  ```
+
+## 3) Introduction: Next.js 네비게이션 개요
+- Next.js의 경로는 **기본적으로 서버에서 렌더링**됨.
+- 성능을 위해 **prefetching, streaming, client-side transitions**를 제공 → 빠르고 부드러운 전환.
+
+## 4) How navigation works(작동 방식)
+- 익혀둘 핵심 개념
+  - **Server Rendering(서버 렌더링)**
+  - **Prefetching(프리패칭)**
+  - **Streaming(스트리밍)**
+  - **Client-side transitions(클라이언트 측 전환)**
+
+### 4-1) Server Rendering(서버 렌더링)
+- 레이아웃/페이지는 기본적으로 **서버 컴포넌트**로 동작.
+- 서버 렌더링 유형
+  - **정적 렌더링**(빌드/재검증 시점, 결과는 캐시됨)
+  - **동적 렌더링**(요청 시점 생성)
+- 단점: 새 경로 표시 전 **서버 응답 대기**가 필요.
+- Next.js 보완
+  - **Prefetching**: 방문 가능성이 높은 경로 데이터를 **미리 가져오기**  
+  - **Client-side transitions**: 클라이언트 전환으로 체감 지연 감소
+- 메모: 최초 방문을 위해 **HTML이 서버에서 생성**됨.
 
 <h1> 2025년 09월 17일 4주차 </h1>
 <h1> 수업내용: Git 브랜치 전환(checkout vs switch)와 Next.js 페이지 생성 </h1>
