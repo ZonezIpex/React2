@@ -179,7 +179,31 @@ export default async function PostPage({
 
 ---
 
+## await이 없어도 async를 붙여 두는 이유
+- Next.js 13+ App Router의 `page.tsx` 같은 **Server Component**는 비동기 렌더링을 기본으로 한다.
+- 따라서 `page.tsx` 안에서 데이터를 `fetch`하는 경우가 많아 `async`를 붙여도 전혀 문제 없음.
 
+---
+
+### 1. 일관성 유지
+- 프로젝트 내에서 어떤 페이지는 `async`, 어떤 페이지는 일반 function이면 혼란스럽다.  
+- 따라서 **Next.js 공식 문서도 대부분 `async function`으로 예시 제공.**
+
+---
+
+### 2. 확장성
+- 현재는 단순히 `posts.find(...)` 같은 더미 데이터를 사용.  
+- 하지만 나중에 **DB / API에서 데이터 fetch**가 추가될 수 있다.  
+- 미리 `async`를 붙여두면 → 나중에 `await fetch(...)`를 추가할 때 **수정 불필요.**
+
+---
+
+### 3. React Server Component 호환성
+- Server Component는 **Promise를 반환**할 수 있어야 한다.  
+- Next.js는 내부적으로 `async` 함수 패턴에 맞게 최적화된 렌더링 파이프라인을 제공.  
+- 따라서 `async`가 붙어 있어도 **불필요한 오버헤드가 거의 없음.**
+
+---
 
 <h1> 2025년 09월 24일 5주차 </h1>
 <h1> 수업내용: Next.js searchParams, [slug] 비동기 params 정리, Link 컴포넌트/전역 메뉴 실습 </h1>
