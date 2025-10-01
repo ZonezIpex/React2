@@ -1,5 +1,186 @@
 <h1> 202130413 신민수
 
+<h1> 2025년 10월 01일 6주차 </h1>
+<h1> 수업내용: Next.js Client-side transitions, 네비게이션 작동 방식 실습 </h1>
+
+---
+
+## 1-4. Client-side transitions (클라이언트 측 전환)
+- 일반적으로 서버 렌더링 페이지로 이동하면 전체 페이지가 **로드**된다.  
+  → 이로 인해 **state가 초기화**, **스크롤 위치 재설정**, **상호작용 차단** 발생.
+- Next.js는 `<Link>` 컴포넌트를 사용한 **클라이언트 측 전환**으로 이를 방지한다.  
+  페이지를 다시 로딩하는 대신, **콘텐츠를 동적으로 업데이트**한다.
+- 특징:
+  - **공유 레이아웃과 UI 유지**
+  - **Prefetching**(미리 가져오기)으로 다음 페이지 로딩 상태를 빠르게 전환
+- 효과:
+  - 서버 렌더링된 앱을 **클라이언트에서 렌더링된 앱처럼** 느끼게 한다.
+  - 프리패칭 + 스트리밍과 함께 사용하면 **동적 경로 전환도 빠르게 가능**.
+
+---
+
+## 1절 네비게이션 작동 방식 실습
+- 앞에서 배운 내용을 다시 확인.
+- 디렉토리 구조는 다음과 같다.  
+  (blog 이름은 다른 이름으로 바꿔도 무방)
+  ```
+  app/
+   ├─ page.tsx       // Root Page
+   ├─ layout.tsx     // RootLayout
+   └─ blog/
+       ├─ page.tsx   // 블로그 목록
+       └─ loading.tsx // 로딩 스켈톤
+  ```
+- 실습 순서:
+  1. **Root Page 작성**
+  2. `blog` 디렉토리에 `page`와 **로딩 스켈톤**(`loading.tsx`) 추가
+  3. `RootLayout`에서 `<Link>`를 이용해 블로그 네비게이션 구현
+- 참고:
+  - 로딩 스켈톤 동작을 확인하기 위해 `blog/page`에 **time delay** 추가
+  - 문서에는 `RootLayout`에 `<a>` 태그를 사용한 예시가 있으나, 이는 Next.js에서 권장하지 않음.
+
+---
+
+## 1절 네비게이션 작동 방식 실습 (오류 예시)
+- `RootLayout`에서 `<a>` 태그를 사용하면 다음과 같은 오류 발생:
+  ```txt
+  Do not use an `<a>` element to navigate to `/blog/`. 
+  Use `<Link />` from `next/link` instead.
+  ```
+- 따라서 내부 이동 시:
+  - `<a>` 태그 ❌  
+  - `<Link>` 컴포넌트 ✅
+- 외부 링크 사용 시:
+  - `<a>` 태그에 `target` 속성 추가 가능
+  - 내부 라우팅은 반드시 `<Link>`를 사용해야 함
+
+---
+
+## 2. 전환을 느리게 만드는 요인은 무엇일까요?
+- Next.js는 최적화를 통해 **네비게이션 속도가 빠르고 반응성**이 뛰어남.
+- 하지만 특정 조건에서는 여전히 전환 속도가 느려질 수 있다.
+- 다음은 일반적인 원인과 개선 방법이다.
+
+---
+
+## 2-1. 동적 경로 없는 loading.tsx
+- 동적 경로 이동 시, 클라이언트는 서버 응답을 기다려야 결과를 표시 가능.  
+  → 사용자는 앱이 **응답하지 않는 것처럼** 느낄 수 있음.
+- 개선 방법:
+  - **부분 프리패칭 활성화**
+  - 네비게이션 트리거 시, 경로 렌더링 동안 **로딩 UI** 표시
+  - 동적 경로에 `loading.tsx` 추가 권장
+
+```tsx
+// app/blog/[slug]/loading.tsx
+export default function Loading() {
+  return <LoadingSkeleton />;
+}
+```
+
+---
+
+### 개발 모드에서 확인
+- Next.js **개발자 도구(Devtools)**를 사용하면 경로가 정적/동적인지 확인 가능.  
+  관련 옵션: **devIndicators**
+- Next.js 15.2.0부터 `position` 옵션 추가.  
+  (기존 `appIsrStatus`, `buildActivity`, `buildActivityPosition`은 더 이상 사용 X)
+
+```ts
+// next.config.ts
+import type { NextConfig } from "next";
+
+const nextConfig: NextConfig = {
+  devIndicators: { position: "bottom-left" },
+};
+
+export default nextConfig;
+```
+
+- 보통 화면 좌측 하단에 N자 아이콘 표시됨.  
+- 인디케이터 위치는 설정에서 변경 가능.  
+- 현재는 라우팅 결과 정도만 제공.
+
+---
+
+## 2-2. 동적 세그먼트 없는 generateStaticParams
+- 동적 세그먼트는 **사전 렌더링 가능**.  
+- 하지만 `generateStaticParams`가 누락되면 → 해당 경로는 **동적 렌더링**으로 대체됨.
+- 해결: `generateStaticParams`를 추가하여 **빌드 시점에 정적 경로 생성**.
+
+```tsx
+// app/blog/[slug]/page.tsx
+export async function generateStaticParams() {
+  const posts = await fetch("../posts").then((res) => res.json());
+
+  return posts.map((post) => ({
+    slug: post.slug,
+  }));
+}
+
+export default async function Page({
+  params,
+}: {
+  params: Promise<{ slug: string }>;
+}) {
+  const { slug } = await params;
+  // ...
+}
+```
+
+---
+
+## 2-2. 동적 세그먼트 없는 generateStaticParams 실습
+- `generateStaticParams`를 사용하면 **빌드 시점에 정적 HTML을 미리 생성**한다.
+- 사용하지 않으면 → 요청할 때마다 **서버에서 동적으로 처리**됨.
+- 자주 변하지 않는 페이지는 `generateStaticParams` 사용 권장  
+  → 정적 사이트처럼 빠르게 제공 가능.
+- 반면, 사용자 입력/DB 조회 등 **실시간 데이터가 필요한 경우**는  
+  `generateStaticParams` 없이 런타임 처리하는 것이 적절.
+
+---
+
+## 코드 분석 - generateStaticParams가 없는 경우
+```tsx
+// app/blog2/[slug]/page.tsx
+// blog2의 동적 라우트 각 포스트에 대응하는 페이지를 렌더링.
+// generateStaticParams를 사용하지 않아 런타임에서 params를 Promise로 전달받음.
+// 안전하게 사용하려면 await로 해제 필요.
+
+import { posts } from "../posts";
+
+export default async function PostPage({
+  params,
+}: {
+  params: Promise<{ slug: string }>;
+}) {
+  // 런타임에서 전달되는 params는 Promise 타입일 수 있음.
+  const { slug } = await params; // 런타임에서 slug 해석
+  const post = posts.find((p) => p.slug === slug);
+
+  if (!post) {
+    return <h1>포스트를 찾을 수 없습니다.</h1>;
+    // 실제 프로젝트에서는 notFound() 호출 권장
+  }
+
+  return (
+    <article>
+      <h1>{post.title}</h1>
+      <p>{post.content}</p>
+    </article>
+  );
+}
+```
+
+- 특징:
+  - `params`는 런타임에만 해석 가능 → 정적 빌드 시점에는 알 수 없음.
+  - `generateStaticParams`를 쓰지 않으면 → 페이지 접근 시마다 서버에서 동적 처리.
+  - 실습에서는 `notFound()` 같은 Next.js 내장 핸들러를 쓰는 것이 더 적절.
+
+---
+
+
+
 <h1> 2025년 09월 24일 5주차 </h1>
 <h1> 수업내용: Next.js searchParams, [slug] 비동기 params 정리, Link 컴포넌트/전역 메뉴 실습 </h1>
 
