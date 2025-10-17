@@ -1,4 +1,231 @@
 <h1> 202130413 신민수
+<h2> 2025년 10월 17일 8주차 </h2>
+<h2> 수업내용: Next.js Server 및 Client Component 사용 시점 </h2>
+
+---
+
+## 1. server 및 client component를 언제 사용해야 하나?
+- **Client 환경과 Server 환경은 서로 다른 기능**을 수행한다.
+- `server`와 `client` 컴포넌트를 상황에 따라 적절히 사용하면,  
+  각 환경에서 필요한 로직을 분리하고 효율적으로 실행할 수 있다.
+
+---
+
+### ✅ 다음과 같은 항목이 필요한 경우 → **Client Component**를 사용
+- **state 및 event handler**
+  - 예: `onClick`, `onChange` 등 사용자 이벤트 처리
+- **Lifecycle logic**
+  - 예: `useEffect` 등 컴포넌트 마운트/업데이트 시 동작하는 로직
+- **브라우저 전용 API 사용**
+  - 예: `localStorage`, `window`, `Navigator.geolocation`
+- **사용자 정의 Hook**
+  - 클라이언트 상태나 상호작용을 다루는 훅(Custom Hook)
+
+---
+
+### ✅ 다음과 같은 항목이 필요한 경우 → **Server Component**를 사용
+- **서버 DB나 API에서 데이터를 가져오는 경우**
+  - 서버 사이드에서 `fetch`, `query` 등을 통해 직접 데이터 처리
+- **API key, 보안 데이터 보호**
+  - 민감한 정보를 클라이언트로 노출하지 않기 위해 서버에서만 처리
+- **전송되는 JavaScript 용량 감소**
+  - 브라우저에서 실행되는 JS 양을 줄여 성능 향상
+- **콘텐츠가 포함된 첫 번째 페인트(First Contentful Paint, FCP) 개선**
+  - 초기 렌더링 속도를 높이기 위해, 콘텐츠를 **Server → Client**로 점진적 스트리밍
+
+---
+
+> 💡 **요약**  
+> - `Client Component`: 상호작용 중심 (이벤트, 상태, 브라우저 API)  
+> - `Server Component`: 데이터 중심 (DB, API, 보안, 초기 렌더링)
+
+---
+
+## 1. server 및 client component를 언제 사용해야 하나? (실습 예제)
+- 예를 들어 `<Page>` 컴포넌트는 **게시물 데이터**를 서버에서 가져와서,  
+  클라이언트 측 상호작용을 처리하는 `<LikeButton>`에 props로 전달하는 **Server Component**이다.
+- 반면 `/ui/like-button`은 **Client Component**이므로 `use client`를 선언해야 한다.
+
+```tsx
+// app/[id]/page.tsx
+import LikeButton from "@/app/ui/like-button";
+import { getPost } from "@/lib/data";
+
+export default async function Page({ params }: { params: { id: string } }) {
+  const post = await getPost(params.id);
+
+  return (
+    <main>
+      <h1>{post.title}</h1>
+      <LikeButton likes={post.likes} />
+    </main>
+  );
+}
+```
+
+```tsx
+// app/ui/like-button.tsx
+"use client";
+
+import { useState } from "react";
+
+export default function LikeButton({ likes }: { likes: number }) {
+  const [count, setCount] = useState(likes);
+  return (
+    <button onClick={() => setCount(count + 1)}>
+      ❤️ {count} likes
+    </button>
+  );
+}
+```
+
+---
+
+## 문서의 코드를 완성해 봅시다 — slug page
+- 완성된 코드는 다음과 같다.  
+- `getPost` 함수를 별도로 구현하지 않고, **slug에 포함된 id**를 직접 비교하여 데이터를 가져온다.
+
+```tsx
+// app/[id]/page.tsx
+import LikeButton from "@/app/ui/like-button";
+import { posts } from "@/lib/data";
+import { notFound } from "next/navigation";
+
+export default async function PostPage({
+  params,
+}: {
+  params: Promise<{ id: string }>;
+}) {
+  const { id } = await params;
+  const post = posts.find((p) => p.id === id);
+
+  if (!post) return notFound();
+
+  return (
+    <main>
+      <h1>{post.title}</h1>
+      <LikeButton likes={post.likes} />
+    </main>
+  );
+}
+```
+
+> 💡 `notFound()`는 Next.js 내장 함수로, 존재하지 않는 페이지 접근 시 404를 렌더링한다.
+
+---
+
+## 1. Optimistic Update (낙관적 업데이트)
+- 사용자의 이벤트(예: 좋아요 버튼 클릭)가 발생하면,  
+  **서버 응답을 기다리지 않고 클라이언트(UI)를 즉시 업데이트**한다.
+- 서버 요청의 성공을 ‘낙관적(optimistic)’으로 가정하고,  
+  화면에 먼저 변화를 보여준다.
+- 서버 응답이 실패하면 → **UI를 원래 상태로 되돌림(rollback)**.
+- 네트워크 지연 중에도 빠른 반응성을 제공하는 것이 핵심 목적.
+
+### ✅ 장점
+- 서버 속도와 관계없이 **즉각적인 피드백** 제공 → 사용자 경험 향상.  
+- 네트워크 상태가 나빠도 체감 속도가 빠름.
+
+### ⚠️ 단점
+- 서버 오류 발생 시 잠시 잘못된 정보가 표시될 수 있음.  
+- 오류 복구(rollback) 로직이 반드시 필요.
+
+---
+
+## 2. Pessimistic Update (비관적 업데이트)
+- 이벤트가 발생하면 **서버 요청 → 응답 후 UI 업데이트**를 수행.  
+- 서버로부터의 성공 응답을 기반으로 UI를 변경하기 때문에  
+  데이터의 일관성이 높다.
+
+### ✅ 장점
+- **데이터의 정확성과 신뢰성** 보장.  
+- 잘못된 데이터 표시 가능성이 낮음.
+
+### ⚠️ 단점
+- 서버 응답을 기다려야 하므로 **체감 속도가 느릴 수 있음.**  
+- 네트워크 지연 시 UX 저하.
+
+| 구분 | 낙관적 업데이트 | 비관적 업데이트 |
+|------|----------------|----------------|
+| UI 업데이트 시점 | 요청 직후 즉시 | 서버 응답 받은 후 |
+| 응답 실패 시 | 원래 상태로 롤백 | UI 변화 없음 |
+| 장점 | 빠른 반응성, 즉각 피드백 | 일관성, 정확성 보장 |
+| 대표 예시 | 좋아요, 버튼 클릭 | 데이터 수정, 폼 제출 |
+
+---
+
+## 3. like-button.tsx 구성
+- `/ui/like-button.tsx`에서 **state를 2개** 사용한다.
+
+```tsx
+const [count, setCount] = useState<number>(likes ?? 0);
+const [isLiking, setIsLiking] = useState(false);
+```
+
+### count
+- 좋아요 클릭 횟수를 저장하는 state  
+- 초기값은 data의 `likes` 필드
+
+### isLiking
+- “서버 요청이 진행 중인지”를 나타내는 state  
+- 초기값: `false`
+
+#### 💡 isLiking의 주요 역할
+1. **중복 클릭 방지** — `isLiking === true`일 때 버튼을 `disabled` 처리.  
+2. **UI 피드백 제공** — 로딩 상태 표시(스피너 등)에 사용 가능.  
+3. **상태 안정성 유지** — 요청 완료 전 추가 변경을 방지해 일관된 상태 보장.
+
+---
+
+## 4. Null 병합 연산자 (Nullish Coalescing Operator)
+```tsx
+const [count, setCount] = useState<number>(likes ?? 0);
+```
+
+### 설명
+- `??` 연산자는 **왼쪽 피연산자가 null 또는 undefined일 경우** 오른쪽 값을 반환.
+- 즉, `likes`가 `null` 또는 `undefined`면 `0`을 반환하고,  
+  값이 있으면 그대로 사용.
+
+### OR(`||`) 연산자와 차이
+- `||`은 `false`, `0`, `""`, `null`, `undefined` 등 **falsy 값 전체**를 오른쪽으로 대체.
+- 반면 `??`는 `null`과 `undefined`만 대체하므로  
+  숫자 `0` 같은 유효한 값은 그대로 유지할 수 있다.
+
+> ✅ 결론: `likes ?? 0`은 **좋아요 수가 null일 때만 0으로 초기화**되며,  
+> 정상적인 0값은 그대로 반영된다.
+
+---
+
+## 2. Next.js에서 server와 client component는 어떻게 작동합니까?
+
+---
+
+### 2-2. client component의 작동 (첫 번째 load)
+
+1. **HTML 렌더링**
+   - 사용자가 페이지를 요청하면, **라우팅된 페이지의 비대화형 미리보기(HTML)**를 즉시 표시한다.  
+   - 즉, 초기 로드 시 서버가 생성한 HTML을 먼저 보여줌으로써 **빠른 첫 화면(FCP)**을 제공한다.
+
+2. **RSC 페이지 로드**
+   - 이후 **RSC(Rendering Server Component)** 가  
+     `client component`와 `server component` 트리를 조정한다.
+
+3. **JavaScript Hydration**
+   - `client component`는 **hydration** 과정을 통해  
+     정적 HTML을 **인터랙티브(대화형)**한 React 애플리케이션으로 변환한다.
+
+---
+
+### 💧 Hydration이란 무엇인가?
+- **Hydration**은  
+  서버에서 전달된 **정적 HTML**에  
+  **이벤트 핸들러(onClick, onChange 등)** 를 연결하여  
+  DOM을 **React가 제어 가능한 상태로 만드는 과정**이다.
+- 즉, 사용자가 상호작용할 수 있도록  
+  HTML을 React의 완전한 애플리케이션으로 “활성화”하는 React의 핵심 프로세스다.
+
+
 
 <h1> 2025년 10월 01일 6주차 </h1>
 <h1> 수업내용: Next.js Client-side transitions, 네비게이션 작동 방식 실습 </h1>
