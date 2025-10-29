@@ -1,4 +1,294 @@
 <h1> 202130413 신민수
+<h2> 2025년 10월 29일 10주차 </h2>
+<h2> 수업내용: Next.js `"use client"` 완벽 정리 및 Server-Client 경계 이해 </h2>
+
+---
+
+## 🧭 개요
+
+Next.js의 **Server Components / Client Components** 개념에서  
+`"use client"` 지시문은 **클라이언트 전용 컴포넌트임을 명시**하는 역할을 합니다.  
+
+이 문서는 `"use client"`의 **사용 예시**, **데이터 전달 방식**, **성능 최적화 전략**,  
+그리고 **Server ↔ Client 컴포넌트 통신 구조**를 단계별로 정리합니다.
+
+---
+
+## 🧩 Client Component 생성
+
+Client Component를 만들려면 파일 맨 위에 `"use client"`를 추가해야 합니다.
+
+```tsx
+'use client'
+
+import { useState } from 'react'
+
+export default function Counter() {
+  const [count, setCount] = useState(0)
+
+  return (
+    <div>
+      <p>{count} likes</p>
+      <button onClick={() => setCount(count + 1)}>Click me</button>
+    </div>
+  )
+}
+```
+
+📌 **핵심 요약**
+- `"use client"`는 **React Hook (`useState`, `useEffect`, 등)** 을 사용하는 컴포넌트에서 필수입니다.  
+- Server Component에서는 Hook을 사용할 수 없기 때문입니다.  
+- 해당 지시문이 선언된 파일은 번들 시 클라이언트 사이드로 분리되어 전송됩니다.
+
+---
+
+## ⚡ JS 번들 크기 줄이기
+
+> `"use client"`는 **필요한 최소한의 영역에만 적용**하는 것이 중요합니다.  
+> 상위 레이아웃 전체에 `"use client"`를 선언하면 불필요한 자바스크립트가 클라이언트로 전송되어  
+> **페이지 로딩 속도와 성능이 저하**됩니다.
+
+### ✅ 올바른 예시
+
+```tsx
+// app/layout.tsx
+import Search from './search'
+import Logo from './logo'
+
+export default function Layout({ children }: { children: React.ReactNode }) {
+  return (
+    <>
+      <nav>
+        <Logo />     {/* 서버에서 렌더링 가능 */}
+        <Search />   {/* 클라이언트 전용 */}
+      </nav>
+      <main>{children}</main>
+    </>
+  )
+}
+```
+
+```tsx
+// app/ui/search.tsx
+'use client'
+
+export default function Search() {
+  // ...
+}
+```
+
+🧠 **설명**
+- `Logo`는 정적 콘텐츠이므로 **Server Component**로 유지.  
+- `Search`는 입력 이벤트와 상태 관리가 필요하므로 **Client Component**로 처리.  
+- 이 구조는 **JS 번들 크기를 최소화**하고 **TTV (Time To View)** 를 단축시킵니다.
+
+---
+
+## 🔗 서버 → 클라이언트 데이터 전달
+
+Server Component에서 데이터를 가져오고,  
+Client Component로 **props를 통해 전달**할 수 있습니다.
+
+```tsx
+// app/[id]/page.tsx
+import LikeButton from '@/app/ui/like-button'
+import { getPost } from '@/lib/data'
+
+export default async function Page({ params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params
+  const post = await getPost(id)
+
+  return <LikeButton likes={post.likes} />
+}
+```
+
+```tsx
+// app/ui/like-button.tsx
+'use client'
+
+export default function LikeButton({ likes }: { likes: number }) {
+  // ...
+}
+```
+
+⚠️ **주의사항**
+- Client Component로 전달되는 `props`는 반드시 **직렬화 가능 (Serializable)** 해야 합니다.  
+- 즉, 함수, 클래스 인스턴스, Symbol 등은 props로 전달 불가합니다.  
+- 단순 JSON 형태(`number`, `string`, `object`, `array`)만 가능.
+
+---
+
+## 🧱 Server ↔ Client 컴포넌트 섞기 (Interleaving)
+
+Next.js에서는 **Server Component를 Client Component의 children으로 넘기는 구조**가 가능합니다.
+
+### 📘 예시
+
+```tsx
+// app/ui/modal.tsx
+'use client'
+
+export default function Modal({ children }: { children: React.ReactNode }) {
+  return <div className="modal">{children}</div>
+}
+```
+
+```tsx
+// app/page.tsx
+import Modal from './ui/modal'
+import Cart from './ui/cart'
+
+export default function Page() {
+  return (
+    <Modal>
+      <Cart /> {/* 서버에서 렌더링된 컴포넌트 */}
+    </Modal>
+  )
+}
+```
+
+🧩 **설명**
+- `Modal`은 클라이언트에서 열고 닫는 토글 상태를 제어합니다.  
+- `Cart`는 서버에서 데이터를 불러오며, `Modal` 내부에 주입(interleave)됩니다.  
+- 즉, **서버 렌더링된 UI**를 **클라이언트 인터랙션을 가진 컴포넌트 안에 자연스럽게 포함**할 수 있습니다.  
+- 이를 **인터리빙(Interleaving)** 이라 부릅니다.
+
+---
+
+## 🎛 React Context 사용하기
+
+> ⚠️ **주의:**  
+> React의 Context API는 **Server Component에서 직접 지원되지 않습니다.**  
+> 따라서 반드시 **Client Provider**를 만들어 감싸야 합니다.
+
+### ✅ 예시
+
+```tsx
+// app/theme-provider.tsx
+'use client'
+
+import { createContext } from 'react'
+
+export const ThemeContext = createContext({})
+
+export default function ThemeProvider({ children }: { children: React.ReactNode }) {
+  return <ThemeContext.Provider value="dark">{children}</ThemeContext.Provider>
+}
+```
+
+```tsx
+// app/layout.tsx
+import ThemeProvider from './theme-provider'
+
+export default function RootLayout({ children }: { children: React.ReactNode }) {
+  return (
+    <html>
+      <body>
+        <ThemeProvider>{children}</ThemeProvider>
+      </body>
+    </html>
+  )
+}
+```
+
+💡 **팁**
+- Provider는 **트리의 가능한 한 깊은 곳**에 배치해야 합니다.  
+- Next.js는 위로 갈수록 정적 렌더링 최적화를 수행하므로  
+  Context Provider를 상위에 둘수록 성능이 떨어질 수 있습니다.
+
+---
+
+## 🧩 써드파티(Third-party) 컴포넌트 사용
+
+`useState`, `useEffect`와 같은 **클라이언트 전용 기능**을 사용하는  
+서드파티 라이브러리는 반드시 **Client Component** 안에서만 사용할 수 있습니다.
+
+### 📘 예시
+
+```tsx
+// app/gallery.tsx
+'use client'
+
+import { useState } from 'react'
+import { Carousel } from 'acme-carousel'
+
+export default function Gallery() {
+  const [isOpen, setIsOpen] = useState(false)
+
+  return (
+    <div>
+      <button onClick={() => setIsOpen(true)}>View pictures</button>
+      {isOpen && <Carousel />}
+    </div>
+  )
+}
+```
+
+🚫 **문제 상황**
+- `Server Component` 내부에서 직접 `Carousel`을 호출하면 오류 발생.  
+
+✅ **해결 방법**
+- **Client Wrapper**를 만들어 해당 컴포넌트를 감싸서 사용.
+
+```tsx
+// app/carousel.tsx
+'use client'
+
+import { Carousel } from 'acme-carousel'
+export default Carousel
+```
+
+이제 Server Component에서도 안전하게 사용 가능 👇
+
+```tsx
+// app/page.tsx
+import Carousel from './carousel'
+
+export default function Page() {
+  return (
+    <div>
+      <p>View pictures</p>
+      <Carousel />
+    </div>
+  )
+}
+```
+
+---
+
+## 🧠 라이브러리 제작자를 위한 조언
+
+- 라이브러리에서 **클라이언트 전용 기능**(`useState`, `useEffect`)을 사용하는 엔트리 포인트에는  
+  반드시 `"use client"`를 추가해야 합니다.
+- 이렇게 하면 사용자가 별도의 Wrapper를 만들지 않고도 바로 import 가능.
+- 단, 일부 번들러(`esbuild`, `rollup`)는 `"use client"` 지시문을 제거할 수 있으므로  
+  **빌드 설정에서 보존되도록 명시**해야 합니다.
+
+---
+
+## 🧾 요약 정리
+
+| 구분 | 설명 |
+|------|------|
+| `"use client"` | 해당 파일을 클라이언트 컴포넌트로 선언 |
+| 데이터 전달 | Server → Client는 `props`를 통해 전달 (직렬화 필요) |
+| 번들 최적화 | 불필요한 `"use client"` 최소화 |
+| Context | Client Provider로 감싸서 사용 |
+| 써드파티 | Client에서만 사용하거나 Wrapper로 감싸기 |
+| 라이브러리 | `"use client"`를 엔트리 포인트에 명시해야 함 |
+
+---
+
+## ✨ 결론: `"use client"` 한 줄 요약
+
+> `"use client"`는 **Next.js의 서버-클라이언트 경계를 명시하는 핵심 도구**입니다.  
+> 정적인 부분은 **서버에서 렌더링**,  
+> 상호작용이 필요한 부분은 **클라이언트에서 실행**함으로써  
+> **성능, 보안, 유지보수성** 모두를 향상시킬 수 있습니다.
+
+
+---
+
 <h2> 2025년 10월 22일 9주차 </h2>
 <h2> 수업내용: Next.js Server 및 Client Component 인터리빙 (Interleaving) </h2>
 
