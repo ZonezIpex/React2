@@ -1,5 +1,199 @@
 <h1> 202130413 신민수
-<h2>2025년 11월 12일 (11주차)</h2>  
+<h2>2025년 11월 19일 (13주차)</h2>
+<h2>수업내용: Next.js의 스타일 적용 방법 — Tailwind / CSS Modules / Global CSS</h2>
+
+---
+## 📘 Introduction
+
+Next.js는 CSS를 사용하여 응용 프로그램의 스타일을 지정하는 다양한 방법을 제공합니다.
+
+### 제공되는 스타일링 방식
+- Tailwind CSS  
+- CSS Modules  
+- Global CSS  
+- External Stylesheets  
+- Sass (Guide)  
+- CSS-in-JS (Guide)
+
+---
+
+# 1. Tailwind CSS
+
+Tailwind CSS는 사용자 정의 디자인을 구축하기 위한 **저수준 유틸리티 클래스 기반 CSS 프레임워크**입니다.
+
+---
+
+## 🛠️ Tailwind CSS 설치
+
+```bash
+npm install -D tailwindcss @tailwindcss/postcss
+```
+
+- Next.js 프로젝트 생성 시 Tailwind 옵션을 선택했다면 따로 설치할 필요 없음  
+- `postcss.config.mjs` 파일에 PostCSS 플러그인을 추가해야 함  
+
+---
+
+## postcss.config.mjs 예시
+
+```js
+// postcss.config.mjs
+export default {
+  plugins: {
+    '@tailwindcss/postcss': {},
+  },
+}
+```
+
+> Next.js Tailwind 템플릿에는 기본적으로 포함되어 있습니다.
+
+---
+
+## Tailwind 클래스 사용 예시
+
+```tsx
+// app/page.tsx
+export default function Page() {
+  return (
+    <main className="flex min-h-screen flex-col items-center justify-between p-24">
+      <h1 className="text-4xl font-bold">Welcome to Next.js!</h1>
+    </main>
+  )
+}
+```
+
+---
+
+## 💡 알아두면 좋아요!
+
+오래된 브라우저를 지원해야 한다면  
+**Tailwind CSS v3 설정 지침**을 참고하세요.
+
+---
+
+# 2. CSS Modules
+
+CSS Modules는 CSS 클래스 이름을 고유하게 생성하여  
+**파일 간 이름 충돌 없이 로컬 스코프 스타일링**을 제공하는 방식입니다.
+
+---
+
+## CSS Modules 파일 예시
+
+```css
+/* app/blog/blog.module.css */
+.blog {
+  padding: 24px;
+}
+```
+
+---
+
+## 사용 예시
+
+```tsx
+// app/blog/page.tsx
+import styles from './blog.module.css'
+
+export default function Page() {
+  return <main className={styles.blog}></main>
+}
+```
+
+---
+
+# 3. Global(전역) CSS
+
+전역 CSS를 사용하면 **애플리케이션 전체에 공통 스타일을 적용**할 수 있습니다.
+
+---
+
+## global.css 예시
+
+```css
+/* app/global.css */
+body {
+  padding: 20px 20px 60px;
+  max-width: 680px;
+  margin: 0 auto;
+}
+```
+
+---
+
+## RootLayout.tsx에서 적용
+
+```tsx
+// app/layout.tsx
+import './global.css'
+
+export default function RootLayout({ children }: { children: React.ReactNode }) {
+  return (
+    <html lang="en">
+      <body>{children}</body>
+    </html>
+  )
+}
+```
+
+---
+
+- Next.js는 다양한 CSS 스타일링 방식을 제공  
+- Tailwind는 유틸리티 기반 빠른 스타일링에 적합  
+- CSS Modules는 컴포넌트 로컬 스코프 스타일링에 적합  
+- Global CSS는 전체 레이아웃 공통 스타일을 관리할 때 사용  
+- RootLayout에서 global.css를 import하여 전체 스타일을 적용할 수 있음 
+
+---
+
+## 3. Global(전역) CSS — 추가 설명
+
+### 💡 알아두면 좋아요!
+
+전역 `app` 스타일은 디렉터리 내의 모든 레이아웃, 페이지 또는 컴포넌트로 가져올 수 있습니다.  
+그러나 **Next.js는 스타일시트에 대한 React의 기본 제공 지원을 사용하여  
+Suspense와 통합되기 때문에**, 현재 충돌로 이어질 수 있는 경로 사이를 탐색할 때  
+스타일시트가 제거되지 않습니다.
+
+정리하면 다음과 같습니다:
+
+1. **전역적으로 한 번만 적용해야 하는 스타일은 `global.css`에 선언하여 사용합니다.**  
+   - 예: Tailwind의 기본 스타일(`tailwindcss`)을 `global`에 import
+
+2. **대부분의 컴포넌트 스타일은 Tailwind로 처리합니다.**
+
+3. **Tailwind로 처리하기 어려운 특정 컴포넌트는 CSS Modules로 커스텀 스타일을 적용합니다.**
+
+---
+
+# 🔧 Bootstrap 실습 (외부 스타일 시트)
+
+## ✔️ 개념 요약
+
+- `Blog2Page`에서 Bootstrap을 import하지 않아도 사용 가능  
+- 이유: **`Blog2Layout`에 import하면 해당 디렉터리 + 하위 디렉터리 전체에 적용되기 때문**
+
+---
+
+## ✔️ 실습 목표
+
+- local Layout이 어디까지 영향을 미치는지 확인
+- Bootstrap의 Alerts 컴포넌트를 활용하여 컴포넌트 출력 구조 확인
+
+---
+
+## ✔️ 실습 단계
+
+1. `/blog2/Blog2Com.tsx` 컴포넌트를 만들고 출력 확인  
+2. `/blog2/components/Blog2Com2.tsx` 컴포넌트 생성 후 출력 확인  
+3. `/components/Blog2RootCom.tsx` 컴포넌트를 만들고 출력 확인  
+4. `blog3` 페이지를 생성하고 지금까지 만든 컴포넌트를 삽입  
+5. `/blog3/Blog3Com.tsx` 컴포넌트를 만들어 blog3 페이지에 넣기  
+
+
+---
+
+<h2>2025년 11월 12일 (12주차)</h2>  
 <h2>수업내용: Next.js 스트리밍 (Streaming) — loading.tsx / Suspense 활용</h2>
 
 ---
