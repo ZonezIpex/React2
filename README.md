@@ -1,4 +1,234 @@
 <h1> 202130413 신민수
+<h2>2025년 11월 26일 (14주차)</h2>
+<h2>수업내용: Next.js 개발환경 vs 프로덕션 환경 차이</h2>
+
+---
+
+# 7. 개발 vs 프로덕션
+
+## 📌 개발 환경 (next dev)
+
+- 개발 중에는 **Fast Refresh(빠른 새로 고침)** 기능 덕분에  
+  CSS 업데이트가 저장 즉시 화면에 적용됩니다.
+
+- Fast Refresh는 개발자 경험(DX)을 높이기 위해  
+  자바스크립트가 활성화된 상태에서 동작해야 합니다.
+
+---
+
+## 📌 프로덕션 환경 (next build)
+
+- 프로덕션 빌드에서는 모든 CSS 파일이 자동으로:
+  - 압축(minify / *.min.css)
+  - 코드 분할된 .css 파일로 분리  
+  → 각 경로(route)에 **필요한 최소 CSS만 로드되도록 최적화**됩니다.
+
+- 프로덕션에서는 자바스크립트가 비활성화된 상태에서도 CSS가 정상적으로 로드됩니다.  
+  하지만 개발 환경에서는 Fast Refresh를 위해 자바스크립트가 필요합니다.
+
+---
+
+## ⚠️ CSS 순서 차이 주의
+
+- 개발 환경에서는 렌더링 중 CSS 순서가 달라져 보일 수 있습니다.  
+- 최종 CSS 적용 순서를 정확히 확인하려면:
+
+👉 **반드시 프로덕션 빌드(`next build`) 기준으로 확인해야 합니다.**
+
+---
+
+# 📘 요약
+
+1. 개발(next dev)은 **Fast Refresh 중심 → 즉시 반영 / JS 필요**  
+2. 프로덕션(next build)은 **CSS 최소 로드 / 자동 최적화 / JS 없어도 로드됨**  
+3. CSS 순서 문제 발생 시 **반드시 next build로 최종 결과 확인**
+
+---
+
+# Next Steps ➜ Guides
+
+애플리케이션에서 CSS를 사용하는 다양한 방식에 대해 더 자세히 알아보려면 아래 가이드를 참고하세요.
+
+- **Tailwind CSS v3** : 더 넓은 브라우저 지원을 위해 Next.js 애플리케이션을 Tailwind CSS v3로 스타일링  
+- **Sass** : Sass를 사용하여 Next.js 애플리케이션의 스타일을 지정  
+- **CSS-in-JS** : Next.js 환경에서 CSS-in-JS 라이브러리 사용  
+
+---
+
+# 1. 이미지 최적화
+
+## 1-1. 이미지 최적화 개념
+
+### Next.js `<Image>` 컴포넌트는 HTML `<img>` 요소를 확장하여 아래 기능을 제공합니다.
+
+- **크기 최적화**  
+  각 기기에 맞춰 자동으로 적절한 크기(image size)로 변환하며 WebP 등 최신 포맷을 사용함.
+
+- **시각적 안정성**  
+  로딩 중 발생하는 **레이아웃 이동(layout shift)** 을 방지.
+
+- **더 빠른 페이지 로드**  
+  브라우저의 네이티브 lazy loading을 사용해 뷰포트에 진입할 때만 이미지 로드.  
+  placeholder 옵션 제공.
+
+- **자산(Asset) 유연성**  
+  원격 서버의 이미지를 원하는 크기로 조절 가능.
+
+### `<Image>` 사용 예시
+
+```tsx
+// app/page.tsx
+import Image from 'next/image'
+
+export default function Page() {
+  return <Image src="" alt="" />
+}
+```
+
+---
+
+# WebP 파일의 특징
+
+- WebP는 효율적인 압축을 통해 파일 크기를 작게 유지하면서  
+  **손실/무손실 압축**, **투명도(알파 채널)**, **애니메이션**을 모두 지원함.
+
+- 이를 통해 웹 페이지 로딩 속도 개선 및 대역폭 절약 효과.  
+  기존 JPEG, PNG, GIF의 장점을 하나로 통합한 최신 이미지 포맷.
+
+## ✔️ WebP의 장점
+
+- 파일 크기가 작아 **웹사이트 로딩 속도 향상**  
+- 빠른 데이터 전송 + 저장 공간 절약  
+- 기존 이미지 형식의 단점을 보완해 **고품질 이미지 표현 가능**
+
+---
+
+# 1-2. 로컬 이미지
+
+정적 파일(이미지, 폰트 등)은 **루트 디렉터리의 `public` 폴더에 저장**합니다.
+
+- `public` 폴더 내의 파일은 기본적으로 **/파일명** 형태의 URL로 접근 가능.
+
+---
+
+## ✔️ 실습: blog 라우팅 페이지 만들기
+
+1. 현재 public 폴더에 있는 이미지 중 하나를 선택  
+2. 라우팅 페이지를 생성하여 해당 이미지를 렌더링  
+3. 필요한 경우 png 파일을 다운로드하여 static asset으로 활용  
+4. 브라우저가 **dark mode**면 `dark:invert` 클래스를 추가해 반전 효과 적용  
+5. Next.js v13 이상에서는 `<Image>` 사용 시 width / height **필수 지정**
+
+---
+
+## ✔️ 컴포넌트 예시
+
+```tsx
+// app/blog/page.tsx
+import Image from 'next/image'
+
+export default function Page() {
+  return (
+    <Image
+      className="dark:invert"
+      src="/nextjs.png"
+      alt="Picture of the author"
+      width={360}
+      height={218}
+    />
+  )
+}
+```
+
+---
+
+# 2. 폰트 최적화
+
+## 2-1. 폰트 최적화 개요
+
+- **next/font** 모듈은 자동으로 폰트를 최적화하고, 외부 네트워크 요청을 제거하여  
+  개인정보 보호 및 성능을 향상시킵니다.
+- 모든 폰트 파일은 자동으로 **프로젝트 자체 호스팅(self-hosting)** 됩니다.
+- 즉, **레이아웃 이동 없이 웹 폰트를 최적의 상태로 로드**합니다.
+- next/font 사용 시:
+  - `next/font/local`
+  - `next/font/google`  
+  에서 import 후 함수처럼 호출하여 사용합니다.
+- 폰트를 적용할 때는 **요소의 className**에 폰트 클래스를 넣어 사용합니다.
+
+### 사용 예시
+
+```tsx
+// app/layout.tsx
+import { Geist } from 'next/font/google'
+
+const geist = Geist({
+  subsets: ['latin'],
+})
+
+export default function Layout({ children }: { children: React.ReactNode }) {
+  return (
+    <html lang="en" className={geist.className}>
+      <body>{children}</body>
+    </html>
+  )
+}
+```
+
+---
+
+## 2-2. Google 폰트
+
+- 모든 Google 폰트는 **자동으로 자체 호스팅**됩니다.
+- 폰트는 정적 assets로 변환되어 배포와 동일한 도메인에서 제공됨 →  
+  사용자가 사이트를 방문할 때 **Google 서버로 요청을 보내지 않음**.
+- Google 폰트를 사용하려면 다음처럼 선택하여 가져옵니다.
+
+### next/font/google 사용 예시
+
+```tsx
+import { Geist } from 'next/font/google'
+
+const geist = Geist({
+  subsets: ['latin'],
+})
+
+export default function RootLayout({ children }: { children: React.ReactNode }) {
+  return (
+    <html lang="en" className={geist.className}>
+      <body>{children}</body>
+    </html>
+  )
+}
+```
+
+---
+
+# 📘 보충 설명 — next/font/google
+
+- Google 폰트를 최적화해서 사용할 때 import 합니다.
+- 폰트 이름은 Google Fonts 사이트에서 선택하면 됩니다.
+- 단, 폰트 이름이 **단어 하나**이면 그대로 사용되지만  
+  폰트 이름이 **여러 단어**이면 `snake_case`로 입력해야 합니다.  
+  (예: Noto Serif → `noto_serif`)
+- 그래도 정상 동작하지 않을 경우 다운로드 받아 **local** 방식으로 사용해야 합니다.
+
+---
+
+# 📘 보충 설명 — next/font/local
+
+- 지원되는 폰트 확장자: `.woff2`, `.woff`, `.ttf`, `.otf`
+- 가장 추천하는 형식은 **woff2**
+  - 가장 가볍고
+  - 압축 효율 최고
+  - 브라우저 지원률 최고
+  - Next.js 자동 최적화 시 가장 잘 작동함
+
+- 다른 포맷의 폰트는 변환 후 사용  
+  변환 도구(무료): https://cloudconvert.com/
+
+---
+
 <h2>2025년 11월 19일 (13주차)</h2>
 <h2>수업내용: Next.js의 스타일 적용 방법 — Tailwind / CSS Modules / Global CSS</h2>
 
